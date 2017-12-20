@@ -8,8 +8,8 @@ const EMPTY_CELL: u8 = 50;
 macro_rules! make_array {
     ($n:expr, $constructor:expr) => {{
         let mut items: [_; $n] = std::mem::uninitialized();
-        for (i, place) in items.iter_mut().enumerate() {
-            std::ptr::write(place, $constructor(i));
+        for place in items.iter_mut() {
+            std::ptr::write(place, $constructor);
         }
         items
     }}
@@ -71,6 +71,8 @@ pub trait ArtNodeTrait<K, V> {
     fn find_child_mut(&mut self, byte: u8) -> Option<&mut ArtNode<K, V>>;
 
     fn find_child(&self, byte: u8) -> Option<&ArtNode<K, V>>;
+
+    fn has_child(&self, byte: u8) -> bool;
 }
 
 
@@ -99,7 +101,7 @@ impl<K, V> ArtNode4<K, V> {
     pub fn new() -> Self {
         ArtNode4 {
             n: ArtNodeBase::new(),
-            keys: [EMPTY_CELL; 4],
+            keys: [0; 4],
             children: Default::default(),
         }
     }
@@ -109,7 +111,7 @@ impl<K, V> ArtNode16<K, V> {
     pub fn new() -> Self {
         ArtNode16 {
             n: ArtNodeBase::new(),
-            keys: [EMPTY_CELL; 16],
+            keys: [0; 16],
             children: Default::default(),
         }
     }
@@ -120,7 +122,7 @@ impl<K, V> ArtNode48<K, V> {
         ArtNode48 {
             n: ArtNodeBase::new(),
             keys: [EMPTY_CELL; 256],
-            children: unsafe { make_array!(48, |_| ArtNode::Empty) }
+            children: unsafe { make_array!(48, ArtNode::Empty) }
         }
     }
 }
@@ -129,7 +131,7 @@ impl<K, V> ArtNode256<K, V> {
     pub fn new() -> Self {
         ArtNode256 {
             n: ArtNodeBase::new(),
-            children: unsafe { make_array!(256, |_| ArtNode::Empty) }
+            children: unsafe { make_array!(256, ArtNode::Empty) }
         }
     }
 }
@@ -154,10 +156,8 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode4<K, V> {
         new_node.add_child(leaf, byte);
 
         for i in 0..4 {
-            if self.keys[i] != EMPTY_CELL {
-                let child = std::mem::replace(&mut self.children[i], ArtNode::Empty);
-                new_node.add_child(child, self.keys[i]);
-            }
+            let child = std::mem::replace(&mut self.children[i as usize], ArtNode::Empty);
+            new_node.add_child(child, self.keys[i as usize]);
         }
 
         ArtNode::Inner16(new_node)
@@ -172,21 +172,30 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode4<K, V> {
     }
 
     fn find_child_mut(&mut self, byte: u8) -> Option<&mut ArtNode<K, V>> {
-        for i in 0..4 {
-            if self.keys[i] == byte {
-                return Some(&mut self.children[i]);
+        for i in 0..self.n.num_children {
+            if self.keys[i as usize] == byte {
+                return Some(&mut self.children[i as usize]);
             }
         }
         None
     }
 
     fn find_child(&self, byte: u8) -> Option<&ArtNode<K, V>> {
-        for i in 0..4 {
-            if self.keys[i] == byte {
-                return Some(&self.children[i]);
+        for i in 0..self.n.num_children {
+            if self.keys[i as usize] == byte {
+                return Some(&self.children[i as usize]);
             }
         }
         None
+    }
+
+    fn has_child(&self, byte: u8) -> bool {
+        for i in 0..self.n.num_children {
+            if self.keys[i as usize] == byte {
+                return true;
+            }
+        }
+        false
     }
 }
 
@@ -227,9 +236,9 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode16<K, V> {
 
     fn find_child_mut(&mut self, byte: u8) -> Option<&mut ArtNode<K, V>> {
         // TODO: O(1)
-        for i in 0..16 {
-            if self.keys[i] == byte {
-                return Some(&mut self.children[i]);
+        for i in 0..self.n.num_children {
+            if self.keys[i as usize] == byte {
+                return Some(&mut self.children[i as usize]);
             }
         }
         None
@@ -237,12 +246,21 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode16<K, V> {
 
     fn find_child(&self, byte: u8) -> Option<&ArtNode<K, V>> {
         // TODO: O(1)
-        for i in 0..16 {
-            if self.keys[i] == byte {
-                return Some(&self.children[i]);
+        for i in 0..self.n.num_children {
+            if self.keys[i as usize] == byte {
+                return Some(&self.children[i as usize]);
             }
         }
         None
+    }
+
+    fn has_child(&self, byte: u8) -> bool {
+        for i in 0..self.n.num_children {
+            if self.keys[i as usize] == byte {
+                return true;
+            }
+        }
+        false
     }
 }
 
@@ -297,6 +315,10 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode48<K, V> {
             Some(&self.children[self.keys[byte as usize] as usize])
         }
     }
+
+    fn has_child(&self, byte: u8) -> bool {
+        self.keys[byte as usize] != EMPTY_CELL
+    }
 }
 
 impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode256<K, V> {
@@ -334,6 +356,14 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode256<K, V> {
             None
         } else {
             Some(&self.children[byte as usize])
+        }
+    }
+
+    fn has_child(&self, byte: u8) -> bool {
+        if let ArtNode::Empty = self.children[byte as usize] {
+            false
+        } else {
+            true
         }
     }
 }

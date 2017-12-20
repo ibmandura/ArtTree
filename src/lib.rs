@@ -68,8 +68,7 @@ impl<'a, K: 'a + ArtKey + std::cmp::PartialEq + std::fmt::Debug, V: std::fmt::De
         } else {
             let next_byte = key.get_byte(depth + prefix_match_len);
 
-            // TODO: optimize 2 find_childs
-            if ptr.find_child(next_byte).is_some() {
+            if ptr.has_child(next_byte) {
                 {
                     let child = ptr.find_child_mut(next_byte).unwrap();
                     Self::rec_insert(child, depth + prefix_match_len + 1, key, value);
@@ -175,6 +174,9 @@ impl<'a, K: 'a + ArtKey + std::cmp::PartialEq + std::fmt::Debug, V: std::fmt::De
             ArtNode::Inner4(ref ptr) => for child_index in 0..4 {
                 Self::preorder(&ptr.children[child_index])
             },
+            ArtNode::Inner16(ref ptr) => for child_index in 0..16 {
+                Self::preorder(&ptr.children[child_index])
+            },
 
             _ => {}
         }
@@ -194,16 +196,24 @@ impl ArtKey for u32 {
         if index >= 4 {
             panic!("Index out o bounce");
         }
-        unsafe { std::mem::transmute::<u32, [u8; 4]>(*self)[3 - index] }
+        //unsafe { std::mem::transmute::<u32, [u8; 4]>(*self)[3 - index] }
+        unsafe { std::mem::transmute::<u32, [u8; 4]>(*self)[index] }
     }
 
     fn get_bytes(&self, buff: &mut [u8], from: usize, len: usize) {
         let bytes = unsafe { std::mem::transmute::<u32, [u8; 4]>(*self) };
 
-        for i in 0..len {
+        /*for i in 0..len {
             let index = i + from;
             buff[i] = bytes[3 - index];
-        }
+        }*/
+
+        /*for i in 0..len {
+            let index = i + from;
+            buff[i] = bytes[index];
+        }*/
+
+        buff.clone_from_slice(&bytes[from..from+len])
     }
 }
 
@@ -216,15 +226,23 @@ impl ArtKey for u64 {
         if index >= 8 {
             panic!("Index out o bounce");
         }
-        unsafe { std::mem::transmute::<u64, [u8; 8]>(*self)[7 - index] }
+        //unsafe { std::mem::transmute::<u64, [u8; 8]>(*self)[7 - index] }
+        unsafe { std::mem::transmute::<u64, [u8; 8]>(*self)[index] }
     }
 
     fn get_bytes(&self, buff: &mut [u8], from: usize, len: usize) {
         let bytes = unsafe { std::mem::transmute::<u64, [u8; 8]>(*self) };
 
-        for i in 0..len {
+        /*for i in 0..len {
             let index = i + from;
             buff[i] = bytes[7 - index];
-        }
+        } */
+
+        /*for i in 0..len {
+            let index = i + from;
+            buff[i] = bytes[index];
+        }*/
+
+        buff.clone_from_slice(&bytes[from..from+len])
     }
 }
