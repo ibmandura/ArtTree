@@ -3,6 +3,7 @@
 
 extern crate test;
 extern crate art;
+extern crate rand;
 
 use art::ArtTree;
 
@@ -12,16 +13,19 @@ mod tests {
     use test::Bencher;
 
     use std::collections::BTreeMap;
+    use rand::Rng;
 
     const N: u32 = 100000;
+    type InsrtType = u64;
 
     #[bench]
     fn bench_insert_art(b: &mut Bencher) {
         let mut t = ArtTree::new();
+        let mut rng = rand::thread_rng();
 
         b.iter(|| {
-            for i in 0..N {
-                test::black_box(t.insert(i,i));
+            for _ in 0..N {
+                test::black_box(t.insert(rng.gen::<InsrtType>(),rng.gen::<InsrtType>()));
             }
         })
     }
@@ -29,10 +33,11 @@ mod tests {
     #[bench]
     fn bench_insert_btree(b: &mut Bencher) {
         let mut t = BTreeMap::new();
+        let mut rng = rand::thread_rng();
 
         b.iter(|| {
-            for i in 0..N {
-                test::black_box(t.insert(i,i));
+            for _ in 0..N {
+                test::black_box(t.insert(rng.gen::<InsrtType>(),rng.gen::<InsrtType>()));
             }
         })
     }
@@ -41,6 +46,6 @@ mod tests {
 fn main() {
     let mut t = ArtTree::new();
     for i in 0..50000 {
-        test::black_box(t.insert(i,i));
+        test::black_box(t.insert(i as u32,i as u32));
     }
 }

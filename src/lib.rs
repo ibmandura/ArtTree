@@ -94,17 +94,17 @@ impl<'a, K: 'a + ArtKey + std::cmp::PartialEq + std::fmt::Debug, V: std::fmt::De
                 if lkey == key {
                     ArtNode::Leaf(key, value)
                 } else {
-                    let mut node = box ArtNode4::new();
+                    let mut new_node = box ArtNode4::new();
 
                     let mut lcp = depth;
                     let max_lcp = std::cmp::min(MAX_PREFIX_LEN, key.get_size());
 
                     while lcp < max_lcp && lkey.get_byte(lcp) == key.get_byte(lcp) {
-                        node.n.partial[lcp - depth] = key.get_byte(lcp);
+                        new_node.n.partial[lcp - depth] = key.get_byte(lcp);
                         lcp += 1;
                     }
 
-                    node.n.partial_len = lcp - depth;
+                    new_node.n.partial_len = lcp - depth;
 
                     let lnext = lkey.get_byte(lcp);
                     let rnext = key.get_byte(lcp);
@@ -112,10 +112,10 @@ impl<'a, K: 'a + ArtKey + std::cmp::PartialEq + std::fmt::Debug, V: std::fmt::De
                     let rleaf = ArtNode::Leaf(key, value);
                     let lleaf = ArtNode::Leaf(lkey, lvalue);
 
-                    node.add_child(lleaf, lnext);
-                    node.add_child(rleaf, rnext);
+                    new_node.add_child(lleaf, lnext);
+                    new_node.add_child(rleaf, rnext);
 
-                    ArtNode::Inner4(node)
+                    ArtNode::Inner4(new_node)
                 }
             }
 
@@ -207,3 +207,24 @@ impl ArtKey for u32 {
     }
 }
 
+impl ArtKey for u64 {
+    fn get_size(&self) -> usize {
+        8
+    }
+
+    fn get_byte(&self, index: usize) -> u8 {
+        if index >= 8 {
+            panic!("Index out o bounce");
+        }
+        unsafe { std::mem::transmute::<u64, [u8; 8]>(*self)[7 - index] }
+    }
+
+    fn get_bytes(&self, buff: &mut [u8], from: usize, len: usize) {
+        let bytes = unsafe { std::mem::transmute::<u64, [u8; 8]>(*self) };
+
+        for i in 0..len {
+            let index = i + from;
+            buff[i] = bytes[7 - index];
+        }
+    }
+}
