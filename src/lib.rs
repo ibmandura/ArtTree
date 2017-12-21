@@ -2,6 +2,7 @@
 #![feature(box_syntax)]
 
 mod nodes;
+mod art;
 
 use nodes::ArtNode;
 
@@ -27,12 +28,15 @@ mod tests {
     use std::collections::BTreeMap;
     use std::collections::HashMap;
     use test::Bencher;
+    use rand::Rng;
 
-    const N: u32 = 100000;
+    const N: u32 = 50000;
+    type InsrtType = u64;
+
     #[bench]
     fn bench_insert_art(b: &mut Bencher) {
-        let mut t = ArtTree::new();
         let mut rng = rand::thread_rng();
+        let mut t = ArtTree::new();
 
         b.iter(|| {
             for _ in 0..N {

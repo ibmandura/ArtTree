@@ -16,13 +16,13 @@ macro_rules! make_array {
 }
 
 #[derive(Debug)]
-pub enum ArtNode<K, T> {
+pub enum ArtNode<K, V> {
     Empty,
-    Inner4(Box<ArtNode4<K, T>>),
-    Inner16(Box<ArtNode16<K, T>>),
-    Inner48(Box<ArtNode48<K, T>>),
-    Inner256(Box<ArtNode256<K, T>>),
-    Leaf(K, T),
+    Inner4(Box<ArtNode4<K, V>>),
+    Inner16(Box<ArtNode16<K, V>>),
+    Inner48(Box<ArtNode48<K, V>>),
+    Inner256(Box<ArtNode256<K, V>>),
+    Leaf(K, V),
 }
 
 #[derive(Debug)]
@@ -74,9 +74,6 @@ pub trait ArtNodeTrait<K, V> {
 
     fn has_child(&self, byte: u8) -> bool;
 }
-
-
-/* ************************ */
 
 impl ArtNodeBase {
     pub fn new() -> Self {
