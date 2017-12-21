@@ -86,7 +86,7 @@ impl ArtNodeBase {
 
     pub fn compute_prefix_match<K: ArtKey>(&self, key: &K, depth: usize) -> usize {
         for i in 0..self.partial_len {
-            if key.get_byte(i + depth) != self.partial[i] {
+            if key.bytes()[i + depth] != self.partial[i] {
                 return i;
             }
         }

@@ -7,9 +7,7 @@ mod art;
 use nodes::ArtNode;
 
 pub trait ArtKey {
-    fn get_size(&self) -> usize;
-    fn get_byte(&self, index: usize) -> u8;
-    fn get_bytes(&self, buff: &mut [u8], from: usize, len: usize);
+    fn bytes(&self) -> &[u8];
 }
 
 #[derive(Debug)]
@@ -30,7 +28,7 @@ mod tests {
     use test::Bencher;
     use rand::Rng;
 
-    const N: u32 = 50000;
+    const N: u32 = 100000;
     type InsrtType = u64;
 
     #[bench]
