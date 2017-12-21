@@ -34,9 +34,10 @@ mod tests {
     #[bench]
     fn bench_insert_art(b: &mut Bencher) {
         let mut rng = rand::thread_rng();
-        let mut t = ArtTree::new();
 
         b.iter(|| {
+            let mut t = ArtTree::new();
+
             for _ in 0..N {
                 test::black_box(t.insert(rng.gen::<InsrtType>(),rng.gen::<InsrtType>()));
             }
@@ -45,10 +46,11 @@ mod tests {
 
     #[bench]
     fn bench_insert_btree(b: &mut Bencher) {
-        let mut t = BTreeMap::new();
         let mut rng = rand::thread_rng();
 
         b.iter(|| {
+            let mut t = BTreeMap::new();
+
             for _ in 0..N {
                 test::black_box(t.insert(rng.gen::<InsrtType>(),rng.gen::<InsrtType>()));
             }
@@ -57,10 +59,11 @@ mod tests {
 
     #[bench]
     fn bench_insert_hmap(b: &mut Bencher) {
-        let mut t = HashMap::new();
         let mut rng = rand::thread_rng();
 
         b.iter(|| {
+            let mut t = HashMap::new();
+
             for _ in 0..N {
                 test::black_box(t.insert(rng.gen::<InsrtType>(),rng.gen::<InsrtType>()));
             }

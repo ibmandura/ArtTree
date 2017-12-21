@@ -3,7 +3,7 @@ use std;
 use {ArtKey};
 
 pub const MAX_PREFIX_LEN: usize = 10;
-const EMPTY_CELL: u8 = 50;
+const EMPTY_CELL: u8 = 0;
 
 macro_rules! make_array {
     ($n:expr, $constructor:expr) => {{
@@ -264,8 +264,8 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode16<K, V> {
 impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode48<K, V> {
     fn add_child(&mut self, child: ArtNode<K, V>, byte: u8) {
         self.children[self.n.num_children as usize] = child;
-        self.keys[byte as usize] = self.n.num_children as u8;
         self.n.num_children += 1;
+        self.keys[byte as usize] = self.n.num_children as u8;
     }
 
     fn is_full(&self) -> bool {
@@ -281,7 +281,7 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode48<K, V> {
 
         for i in 0..256 {
             if self.keys[i] != EMPTY_CELL {
-                let child = std::mem::replace(&mut self.children[self.keys[i] as usize], ArtNode::Empty);
+                let child = std::mem::replace(&mut self.children[self.keys[i] as usize - 1], ArtNode::Empty);
                 new_node.add_child(child, i as u8);
             }
         }
@@ -301,7 +301,7 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode48<K, V> {
         if self.keys[byte as usize] == EMPTY_CELL {
             None
         } else {
-            Some(&mut self.children[self.keys[byte as usize] as usize])
+            Some(&mut self.children[self.keys[byte as usize] as usize - 1])
         }
     }
 
@@ -309,7 +309,7 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode48<K, V> {
         if self.keys[byte as usize] == EMPTY_CELL {
             None
         } else {
-            Some(&self.children[self.keys[byte as usize] as usize])
+            Some(&self.children[self.keys[byte as usize] as usize - 1])
         }
     }
 
