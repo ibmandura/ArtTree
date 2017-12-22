@@ -5,18 +5,39 @@ extern crate test;
 extern crate art;
 extern crate rand;
 
-use test::Bencher;
 
 use art::ArtTree;
 use rand::Rng;
 
-const N: u32 = 100000;
-type InsrtType = u64;
-
-
 #[test]
 fn sanity_test() {
     type InsrtType = u64;
+    let mut t = ArtTree::new();
+
+    let mut rng = rand::thread_rng();
+
+    let n = 5011;
+
+    let mut keys = Vec::new();
+    for _ in 0..n {
+        keys.push(rng.gen::<InsrtType>());
+    }
+
+    for i in 0..n {
+        test::black_box(t.insert(keys[i], keys[i]));
+    }
+
+    for i in 0..n {
+        match t.get(&keys[i]) {
+            None => assert!(false),
+            Some(x) => assert_eq!(*x, keys[i]),
+        }
+    }
+}
+
+#[test]
+fn sanity_test_u32() {
+    type InsrtType = u32;
     let mut t = ArtTree::new();
 
     let mut rng = rand::thread_rng();
@@ -52,6 +73,49 @@ fn sanity_seq_test() {
 
     for i in 0..n {
         match t.get(&i) {
+            None => assert!(false),
+            Some(x) => assert_eq!(*x, i),
+        }
+    }
+}
+
+
+#[test]
+fn short_string_test() {
+    let mut rng = rand::thread_rng();
+
+    let mut keys = Vec::with_capacity(100);
+
+    let mut t = ArtTree::new();
+    for i in 0..100 {
+        let s = rng.gen_ascii_chars().take(50).collect::<String>();
+        keys.push(s.clone());
+        test::black_box(t.insert(s, i));
+    }
+
+    for i in 0..100 {
+        match t.get(&keys[i]) {
+            None => assert!(false),
+            Some(x) => assert_eq!(*x, i),
+        }
+    }
+}
+
+#[test]
+fn long_string_test() {
+    let mut rng = rand::thread_rng();
+
+    let mut keys = Vec::with_capacity(100);
+
+    let mut t = ArtTree::new();
+    for i in 0..100 {
+        let s = rng.gen_ascii_chars().take(500).collect::<String>();
+        keys.push(s.clone());
+        test::black_box(t.insert(s, i));
+    }
+
+    for i in 0..100 {
+        match t.get(&keys[i]) {
             None => assert!(false),
             Some(x) => assert_eq!(*x, i),
         }
