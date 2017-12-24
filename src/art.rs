@@ -246,6 +246,7 @@ impl<'a, K: 'a + ArtKey + std::cmp::PartialEq + std::fmt::Debug, V: std::fmt::De
     }
 
     pub fn remove(&mut self, key: &K) -> Option<V> {
+        self.size -= 1;
         Self::remove_rec(&mut self.root, key, 0)
     }
     
