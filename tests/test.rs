@@ -1,4 +1,5 @@
 
+#![feature(iterator_step_by)]
 #![feature(test)]
 
 extern crate test;
@@ -118,6 +119,29 @@ fn long_string_test() {
         match t.get(&keys[i]) {
             None => assert!(false),
             Some(x) => assert_eq!(*x, i),
+        }
+    }
+}
+
+#[test]
+fn delete_test() {
+    let mut t = ArtTree::new();
+
+    for i in 0..100u32 {
+        t.insert(i,i);
+    }
+
+    for i in (0..100u32).step_by(2) {
+        match t.remove(&i) {
+            Some(x) => assert_eq!(x, i),
+            None => assert!(false),
+        }
+    }
+
+    for i in (1..100).step_by(2) {
+        match t.get(&i) {
+            Some(x) => assert_eq!(*x, i),
+            None => assert!(false),
         }
     }
 }
