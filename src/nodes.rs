@@ -103,7 +103,10 @@ pub struct ArtNode256<K, V> {
 pub trait ArtNodeTrait<K, V> {
     fn add_child(&mut self, node: ArtNode<K, V>, byte: u8);
 
-    fn remove_child(&mut self, byte: u8) -> bool;
+    // After the child has been set to Empty, it can(has) to be cleaned
+    // so that bookeepig is updated. 
+    // @return: returns should_shrink
+    fn clean_child(&mut self, byte: u8) -> bool;
 
     #[inline]
     fn is_full(&self) -> bool;
@@ -265,7 +268,7 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode4<K, V> {
         self.n.num_children += 1;
     }
 
-    fn remove_child(&mut self, byte: u8) -> bool {
+    fn clean_child(&mut self, byte: u8) -> bool {
         for i in 0..self.n.num_children {
             if self.keys[i as usize] == byte {
                 self.keys[i as usize] = EMPTY_CELL;
@@ -356,7 +359,7 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode16<K, V> {
         self.n.num_children += 1;
     }
 
-    fn remove_child(&mut self, byte: u8) -> bool {
+    fn clean_child(&mut self, byte: u8) -> bool {
         for i in 0..self.n.num_children {
             if self.keys[i as usize] == byte {
                 self.keys[i as usize] = EMPTY_CELL;
@@ -465,7 +468,7 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode48<K, V> {
         self.keys[byte as usize] = self.n.num_children as u8;
     }
 
-    fn remove_child(&mut self, byte: u8) -> bool {
+    fn clean_child(&mut self, byte: u8) -> bool {
         self.keys[byte as usize] = EMPTY_CELL;
         self.n.num_children -= 1;
         self.n.num_children <= 10
@@ -554,7 +557,7 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode256<K, V> {
         self.children[byte as usize] = child;
     }
  
-    fn remove_child(&mut self, _byte: u8) -> bool {
+    fn clean_child(&mut self, _byte: u8) -> bool {
         self.n.num_children -= 1;
         self.n.num_children <= 40 // TODO: decide on this constatns for shrinking
     } 
@@ -568,6 +571,8 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode256<K, V> {
     }
 
     fn shrink(mut self) -> ArtNode<K,V> {
+        // TODO: several lines here basically same for all the nodes
+        //       try to dedupe somehow
         let mut new_node = Box::new(ArtNode48::new());
         new_node.n.partial_len = self.n.partial_len;
 

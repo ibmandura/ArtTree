@@ -5,6 +5,7 @@ use std::mem;
 use {ArtKey, ArtTree};
 use nodes::{ArtNode, ArtNode4, ArtNodeTrait, MAX_PREFIX_LEN};
 
+// TODO: remove std::fmt::Debug 
 impl<'a, K: 'a + ArtKey + std::cmp::PartialEq + std::fmt::Debug, V: std::fmt::Debug> ArtTree<K, V> {
     pub fn new() -> Self {
         ArtTree {
@@ -211,11 +212,11 @@ impl<'a, K: 'a + ArtKey + std::cmp::PartialEq + std::fmt::Debug, V: std::fmt::De
             let ret = Self::remove_rec(ptr.find_child_mut(next_byte), key, depth + prefix_match_len + 1);
 
             match ptr.find_child(next_byte) {
-                // TODO: this is weird API, remove_child is called after the child is allready removed
-                //       why does remove_child return should_shrink? 
-                // Do this for now, but lets focus on this sometimes
+                // TODO: This is weird API, clean_child is called after the child has already been removed.
+                //       Why does remove_child return should_shrink? 
+                //       Do this for now, but lets focus on this sometimes.
                 
-                Some(&ArtNode::Empty) => if ptr.remove_child(next_byte) {
+                Some(&ArtNode::Empty) => if ptr.clean_child(next_byte) {
                     (ptr.shrink(), ret)
                 } else {
                     (ptr.to_art_node(), ret)
