@@ -5,8 +5,7 @@ use std::mem;
 use {ArtKey, ArtTree};
 use nodes::{ArtNode, ArtNode4, ArtNodeTrait, MAX_PREFIX_LEN};
 
-// TODO: remove std::fmt::Debug 
-impl<'a, K: 'a + ArtKey + std::cmp::PartialEq + std::fmt::Debug, V: std::fmt::Debug> ArtTree<K, V> {
+impl<'a, K: 'a + ArtKey + std::cmp::PartialEq, V> ArtTree<K, V> {
     pub fn new() -> Self {
         ArtTree {
             root: ArtNode::Empty,
@@ -249,23 +248,6 @@ impl<'a, K: 'a + ArtKey + std::cmp::PartialEq + std::fmt::Debug, V: std::fmt::De
     pub fn remove(&mut self, key: &K) -> Option<V> {
         self.size -= 1;
         Self::remove_rec(&mut self.root, key, 0)
-    }
-    
-    fn preorder(root: &ArtNode<K, V>) {
-        match *root {
-            ArtNode::Inner4(ref ptr) => for child_index in 0..4 {
-                Self::preorder(&ptr.children[child_index])
-            },
-            ArtNode::Inner16(ref ptr) => for child_index in 0..16 {
-                Self::preorder(&ptr.children[child_index])
-            },
-
-            _ => {}
-        }
-    }
-
-    pub fn print(&self) {
-        Self::preorder(&self.root);
     }
 }
 

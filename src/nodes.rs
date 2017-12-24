@@ -21,7 +21,6 @@ macro_rules! make_array {
 
 type Small = [u8; SMALL_STRUCT];
 
-#[derive(Debug)]
 pub struct SmallStruct<T> {
     storage: Small,
     marker: PhantomData<T>,
@@ -53,7 +52,6 @@ impl<T> SmallStruct<T> {
     }
 }
 
-#[derive(Debug)]
 pub enum ArtNode<K, V> {
     Empty,
 
@@ -68,21 +66,18 @@ pub enum ArtNode<K, V> {
     LeafSmall(SmallStruct<K>, SmallStruct<V>),
 }
 
-#[derive(Debug)]
 pub struct ArtNodeBase {
     pub num_children: u16,
     pub partial: [u8; MAX_PREFIX_LEN],
     pub partial_len: usize,
 }
 
-#[derive(Debug)]
 pub struct ArtNode4<K, V> {
     pub n: ArtNodeBase,
     pub keys: mem::ManuallyDrop<[u8; 4]>,
     pub children: mem::ManuallyDrop<[ArtNode<K, V>; 4]>,
 }
 
-#[derive(Debug)]
 pub struct ArtNode16<K, V> {
     pub n: ArtNodeBase,
     pub keys: mem::ManuallyDrop<[u8; 16]>,
@@ -621,23 +616,5 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode256<K, V> {
             ArtNode::Empty => false,
             _ => true,
         }
-    }
-}
-
-impl<K, T> std::fmt::Debug for ArtNode48<K, T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "ArtNode48{{ n: {:?}, keys, children }}", self.n)
-    }
-}
-
-impl<K, T> std::fmt::Debug for ArtNode256<K, T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "ArtNode256{{ n: {:?}, keys, children }}", self.n)
-    }
-}
-
-impl<_K, _V> Default for ArtNode<_K, _V> {
-    fn default() -> Self {
-        ArtNode::Empty
     }
 }
