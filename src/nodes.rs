@@ -100,7 +100,11 @@ pub trait ArtNodeTrait<K, V> {
 
     // After the child has been set to Empty, it can(has) to be cleaned
     // so that bookeepig is updated. 
-    // @return: returns should_shrink
+    // @return: returns `should_shrink` boolean. We can then decide if we want to shrink it or not.
+    //
+    // TODO: this API is stupid, and should be refactored. This function should return (). Or if it
+    // has to return something, should return `can_shrink` boolean.
+    //
     fn clean_child(&mut self, byte: u8) -> bool;
 
     #[inline]
