@@ -198,8 +198,7 @@ impl<'a, K: 'a + ArtKey + std::cmp::PartialEq, V> ArtTree<K, V> {
         }
     }
 
-    //  TODO: lets make uniform api
-    fn remove_inner<N>(mut ptr: Box<N>, key: &K, depth: usize)-> (ArtNode<K,V>, Option<V>)
+    fn remove_inner<N>(mut ptr: Box<N>, depth: usize, key: &K)-> (ArtNode<K,V>, Option<V>)
         where N: ArtNodeTrait<K,V>
     {
         let prefix_match_len = ptr.base().compute_prefix_match(key, depth);
@@ -208,7 +207,7 @@ impl<'a, K: 'a + ArtKey + std::cmp::PartialEq, V> ArtTree<K, V> {
         if prefix_match_len != ptr.base().partial_len || !ptr.has_child(next_byte) {
             (ptr.to_art_node(), None)
         } else {
-            let ret = Self::remove_rec(ptr.find_child_mut(next_byte), key, depth + prefix_match_len + 1);
+            let ret = Self::remove_rec(ptr.find_child_mut(next_byte), depth + prefix_match_len + 1, key);
 
             match ptr.find_child(next_byte) {
                 // TODO: This is weird API, clean_child is called after the child has already been removed.
@@ -226,17 +225,17 @@ impl<'a, K: 'a + ArtKey + std::cmp::PartialEq, V> ArtTree<K, V> {
         }
     }
 
-    fn remove_rec(root: &mut ArtNode<K,V>, key: &K, depth: usize) -> Option<V> {
+    fn remove_rec(root: &mut ArtNode<K,V>, depth: usize, key: &K) -> Option<V> {
         let (new_root, ret) = match mem::replace(root, ArtNode::Empty) {
             ArtNode::Empty => (ArtNode::Empty, None),
 
-            ArtNode::Inner4(ptr) => Self::remove_inner(ptr, key, depth),
+            ArtNode::Inner4(ptr) => Self::remove_inner(ptr, depth, key),
 
-            ArtNode::Inner16(ptr) => Self::remove_inner(ptr, key, depth),
+            ArtNode::Inner16(ptr) => Self::remove_inner(ptr, depth, key),
 
-            ArtNode::Inner48(ptr) => Self::remove_inner(ptr, key, depth),
+            ArtNode::Inner48(ptr) => Self::remove_inner(ptr, depth, key), 
 
-            ArtNode::Inner256(ptr) => Self::remove_inner(ptr, key, depth),
+            ArtNode::Inner256(ptr) => Self::remove_inner(ptr, depth, key),
 
             leaf => (ArtNode::Empty, Self::remove_leaf(leaf, key)),
         };
@@ -247,7 +246,7 @@ impl<'a, K: 'a + ArtKey + std::cmp::PartialEq, V> ArtTree<K, V> {
 
     pub fn remove(&mut self, key: &K) -> Option<V> {
         self.size -= 1;
-        Self::remove_rec(&mut self.root, key, 0)
+        Self::remove_rec(&mut self.root, 0, key)
     }
 }
 
