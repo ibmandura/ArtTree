@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 
 use {ArtKey};
 
-pub const MAX_PREFIX_LEN: usize = 10;
+pub const MAX_PREFIX_LEN: usize = 6;
 pub const SMALL_STRUCT: usize = 8;
 const EMPTY_CELL: u8 = 0;
 
@@ -42,6 +42,15 @@ impl<T> SmallStruct<T> {
     pub fn reference(&self) -> &T {
         unsafe { &*(self.storage.as_ptr() as *const T) }
     }
+
+    pub fn own(self) -> T {
+        unsafe {
+            let mut ret = mem::uninitialized();
+            let dst = &mut ret as *mut T as *mut u8;
+            std::ptr::copy_nonoverlapping(self.storage.as_ptr(), dst, mem::size_of::<T>());
+            ret
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -62,8 +71,8 @@ pub enum ArtNode<K, V> {
 #[derive(Debug)]
 pub struct ArtNodeBase {
     pub num_children: u16,
-    pub partial_len: usize,
     pub partial: [u8; MAX_PREFIX_LEN],
+    pub partial_len: usize,
 }
 
 #[derive(Debug)]
@@ -94,10 +103,14 @@ pub struct ArtNode256<K, V> {
 pub trait ArtNodeTrait<K, V> {
     fn add_child(&mut self, node: ArtNode<K, V>, byte: u8);
 
+    fn remove_child(&mut self, byte: u8) -> bool;
+
     #[inline]
     fn is_full(&self) -> bool;
 
     fn grow_and_add(self, leaf: ArtNode<K, V>, byte: u8) -> ArtNode<K, V>;
+
+    fn shrink(self) -> ArtNode<K,V>;
 
     #[inline]
     fn mut_base(&mut self) -> &mut ArtNodeBase;
@@ -127,6 +140,16 @@ impl<K: ArtKey, V> ArtNode<K, V> {
             &ArtNode::LeafLargeValue(ref key_small, _) => key_small.reference(),
             &ArtNode::LeafSmall(ref key_small, _) => key_small.reference(),
             _ => panic!("Does not contain key"),
+        }
+    }
+
+    pub fn value(self) -> V {
+        match self {
+            ArtNode::LeafLarge(ptr) => ptr.1,
+            ArtNode::LeafLargeKey(_, value_small) => value_small.own(),
+            ArtNode::LeafLargeValue(_, value_ptr) => *value_ptr,
+            ArtNode::LeafSmall(_, value_small) => value_small.own(),
+            _ => panic!("Does not contain value"),
         }
     }
 
@@ -242,12 +265,28 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode4<K, V> {
         self.n.num_children += 1;
     }
 
+    fn remove_child(&mut self, byte: u8) -> bool {
+        for i in 0..self.n.num_children {
+            if self.keys[i as usize] == byte {
+                self.keys[i as usize] = EMPTY_CELL;
+                self.n.num_children -= 1;
+                self.children.swap(i as usize, self.n.num_children as usize);
+                return self.n.num_children == 0;
+            }
+        }
+        panic!("Removing child not found");
+    }
+
     fn is_full(&self) -> bool {
         self.n.num_children >= 4
     }
 
     fn to_art_node(self: Box<Self>) -> ArtNode<K,V> {
         ArtNode::Inner4(self)
+    }
+
+    fn shrink(self) -> ArtNode<K,V> {
+        ArtNode::Empty
     }
 
     fn grow_and_add(mut self, leaf: ArtNode<K, V>, byte: u8) -> ArtNode<K, V> {
@@ -317,12 +356,44 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode16<K, V> {
         self.n.num_children += 1;
     }
 
+    fn remove_child(&mut self, byte: u8) -> bool {
+        for i in 0..self.n.num_children {
+            if self.keys[i as usize] == byte {
+                self.keys[i as usize] = EMPTY_CELL;
+                self.n.num_children -= 1;
+                self.children.swap(i as usize, self.n.num_children as usize);
+                return self.n.num_children <= 2
+            }
+        }
+        panic!("Removing child not found");
+    }
+
     fn is_full(&self) -> bool {
         self.n.num_children >= 16
     }
 
     fn to_art_node(self: Box<Self>) -> ArtNode<K,V> {
         ArtNode::Inner16(self)
+    }
+
+    fn shrink(mut self) -> ArtNode<K,V> {
+        let mut new_node = Box::new(ArtNode4::new());
+
+        new_node.n.partial_len = self.n.partial_len;
+
+        unsafe {
+            ptr::copy_nonoverlapping(
+                self.n.partial.as_ptr(),
+                new_node.n.partial.as_mut_ptr(),
+                self.n.partial.len());
+        }
+
+        for i in 0..self.n.num_children {
+            let child = std::mem::replace(&mut self.children[i as usize], ArtNode::Empty);
+            new_node.add_child(child, self.keys[i as usize]);
+        }
+
+        ArtNode::Inner4(new_node)
     }
 
     fn grow_and_add(mut self, leaf: ArtNode<K, V>, byte: u8) -> ArtNode<K, V> {
@@ -394,6 +465,12 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode48<K, V> {
         self.keys[byte as usize] = self.n.num_children as u8;
     }
 
+    fn remove_child(&mut self, byte: u8) -> bool {
+        self.keys[byte as usize] = EMPTY_CELL;
+        self.n.num_children -= 1;
+        self.n.num_children <= 10
+    }
+
     fn is_full(&self) -> bool {
         self.n.num_children >= 48
     }
@@ -402,9 +479,29 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode48<K, V> {
         ArtNode::Inner48(self)
     }
 
+    fn shrink(mut self) -> ArtNode<K,V> {
+        let mut new_node = Box::new(ArtNode16::new());
+        new_node.n.partial_len = self.n.partial_len;
+
+        unsafe {
+            ptr::copy_nonoverlapping(
+                self.n.partial.as_ptr(),
+                new_node.n.partial.as_mut_ptr(),
+                self.n.partial.len());
+        }
+
+        for i in 0..256 {
+            if self.keys[i] != EMPTY_CELL {
+                let child = std::mem::replace(&mut self.children[self.keys[i] as usize - 1], ArtNode::Empty);
+                new_node.add_child(child, i as u8);
+            }
+        }
+
+        ArtNode::Inner16(new_node)
+    }
+
     fn grow_and_add(mut self, leaf: ArtNode<K, V>, byte: u8) -> ArtNode<K, V> {
         let mut new_node = Box::new(ArtNode256::new());
-
         new_node.n.partial_len = self.n.partial_len;
 
         unsafe {
@@ -456,6 +553,11 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode256<K, V> {
         self.n.num_children += 1;
         self.children[byte as usize] = child;
     }
+ 
+    fn remove_child(&mut self, _byte: u8) -> bool {
+        self.n.num_children -= 1;
+        self.n.num_children <= 40 // TODO: decide on this constatns for shrinking
+    } 
 
     fn is_full(&self) -> bool {
         self.n.num_children >= 256
@@ -465,8 +567,29 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode256<K, V> {
         ArtNode::Inner256(self)
     }
 
+    fn shrink(mut self) -> ArtNode<K,V> {
+        let mut new_node = Box::new(ArtNode48::new());
+        new_node.n.partial_len = self.n.partial_len;
+
+        unsafe {
+            ptr::copy_nonoverlapping(
+                self.n.partial.as_ptr(),
+                new_node.n.partial.as_mut_ptr(),
+                self.n.partial.len());
+        }
+
+        for i in 0..256 {
+            match mem::replace(&mut self.children[i], ArtNode::Empty) {
+                ArtNode::Empty => continue,
+                node => new_node.add_child(node, i as u8),
+            }
+        }
+
+        ArtNode::Inner48(new_node)
+    }
+
     fn grow_and_add(self, _leaf: ArtNode<K, V>, _byte: u8) -> ArtNode<K, V> {
-        panic!("Cannot grow 256 sized node");
+        panic!("Cannot grow ArtNode256");
     }
 
     fn mut_base(&mut self) -> &mut ArtNodeBase {

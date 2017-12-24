@@ -13,15 +13,6 @@ impl<'a, K: 'a + ArtKey + std::cmp::PartialEq + std::fmt::Debug, V: std::fmt::De
         }
     }
 
-    #[inline]
-    fn key_cmp(lhs: &[u8], rhs: &[u8]) -> bool {
-        if lhs.len() == rhs.len() {
-            lhs == rhs
-        } else {
-            false
-        }
-    }
-
     fn break_node<N: ArtNodeTrait<K, V>>(
         mut ptr: Box<N>,
         prefix_match_len: usize,
@@ -56,12 +47,9 @@ impl<'a, K: 'a + ArtKey + std::cmp::PartialEq + std::fmt::Debug, V: std::fmt::De
         ArtNode::Inner4(new_node)
     }
 
-    fn insert_inner<N: ArtNodeTrait<K, V>>(
-        mut ptr: Box<N>,
-        depth: usize,
-        key: K,
-        value: V,
-    ) -> ArtNode<K, V> {
+    fn insert_inner<N>(mut ptr: Box<N>, depth: usize, key: K, value: V) -> ArtNode<K, V>
+        where N: ArtNodeTrait<K,V>
+    {
         let prefix_match_len = ptr.base().compute_prefix_match(&key, depth);
 
         if prefix_match_len != ptr.base().partial_len {
@@ -72,7 +60,7 @@ impl<'a, K: 'a + ArtKey + std::cmp::PartialEq + std::fmt::Debug, V: std::fmt::De
             if ptr.has_child(next_byte) {
                 {
                     let child = ptr.find_child_mut(next_byte);
-                    Self::rec_insert(child, depth + prefix_match_len + 1, key, value);
+                    Self::insert_rec(child, depth + prefix_match_len + 1, key, value);
                 }
                 ptr.to_art_node()
             } else if ptr.is_full() {
@@ -85,7 +73,7 @@ impl<'a, K: 'a + ArtKey + std::cmp::PartialEq + std::fmt::Debug, V: std::fmt::De
     }
 
     fn insert_leaf(lleaf: ArtNode<K,V>, key: K, value: V, depth: usize) -> ArtNode<K,V> {
-        if Self::key_cmp(&lleaf.key().bytes()[depth..], &key.bytes()[depth..]) {
+        if *lleaf.key() == key {
             return ArtNode::new_leaf(key, value);
         }
 
@@ -124,7 +112,7 @@ impl<'a, K: 'a + ArtKey + std::cmp::PartialEq + std::fmt::Debug, V: std::fmt::De
         ArtNode::Inner4(new_node)
     }
 
-    fn rec_insert(root: &mut ArtNode<K, V>, depth: usize, key: K, value: V) {
+    fn insert_rec(root: &mut ArtNode<K, V>, depth: usize, key: K, value: V) {
         *root = match mem::replace(root, ArtNode::Empty) {
             ArtNode::Empty => ArtNode::new_leaf(key, value),
 
@@ -142,9 +130,10 @@ impl<'a, K: 'a + ArtKey + std::cmp::PartialEq + std::fmt::Debug, V: std::fmt::De
 
     pub fn insert(&mut self, key: K, value: V) {
         self.size += 1;
-        Self::rec_insert(&mut self.root, 0, key, value);
+        Self::insert_rec(&mut self.root, 0, key, value);
     }
 
+    #[inline]
     fn search_inner<N: ArtNodeTrait<K,V>>(ptr: &'a N, key: &K, depth: usize) -> Option<&'a V> {
         let lcp = ptr.base().compute_prefix_match(key, depth);
 
@@ -163,17 +152,29 @@ impl<'a, K: 'a + ArtKey + std::cmp::PartialEq + std::fmt::Debug, V: std::fmt::De
         match root {
             &ArtNode::Empty => None,
 
-            &ArtNode::LeafLarge(ref ptr) =>
-                if Self::key_cmp(ptr.0.bytes(), key.bytes()) { Some(&ptr.1) } else { None }
+            &ArtNode::LeafLarge(ref ptr) => if ptr.0 == *key {
+                Some(&ptr.1)
+            } else {
+                None
+            }
             
-            &ArtNode::LeafLargeKey(ref key_ptr, ref small_value) =>
-                if Self::key_cmp(key_ptr.bytes(), key.bytes()) { Some(small_value.reference()) } else { None }
+            &ArtNode::LeafLargeKey(ref key_ptr, ref small_value) => if **key_ptr == *key {
+                Some(small_value.reference())
+            } else {
+                None
+            }
 
-            &ArtNode::LeafLargeValue(ref small_key, ref value_ptr) =>
-                if Self::key_cmp(small_key.reference().bytes(), key.bytes()) { Some(value_ptr) } else { None }
+            &ArtNode::LeafLargeValue(ref small_key, ref value_ptr) => if *small_key.reference() == *key {
+                Some(value_ptr)
+            } else {
+                None
+            }
 
-            &ArtNode::LeafSmall(ref small_key, ref small_value) =>
-                if Self::key_cmp(small_key.reference().bytes(), key.bytes()) { Some(small_value.reference()) } else { None }
+            &ArtNode::LeafSmall(ref small_key, ref small_value) => if *small_key.reference() == *key {
+                Some(small_value.reference())
+            } else {
+                None
+            }
 
             &ArtNode::Inner4(ref ptr) => Self::search_inner(&**ptr, key, depth),
 
@@ -189,6 +190,65 @@ impl<'a, K: 'a + ArtKey + std::cmp::PartialEq + std::fmt::Debug, V: std::fmt::De
         Self::search_rec(&self.root, key, 0)
     }
 
+    fn remove_leaf(leaf: ArtNode<K,V>, key: &K) -> Option<V> {
+        if *key == *leaf.key() {
+            Some(leaf.value())
+        } else {
+            None
+        }
+    }
+
+    //  TODO: lets make uniform api
+    fn remove_inner<N>(mut ptr: Box<N>, key: &K, depth: usize)-> (ArtNode<K,V>, Option<V>)
+        where N: ArtNodeTrait<K,V>
+    {
+        let prefix_match_len = ptr.base().compute_prefix_match(key, depth);
+        let next_byte = key.bytes()[depth + prefix_match_len];
+
+        if prefix_match_len != ptr.base().partial_len || !ptr.has_child(next_byte) {
+            (ptr.to_art_node(), None)
+        } else {
+            let ret = Self::remove_rec(ptr.find_child_mut(next_byte), key, depth + prefix_match_len + 1);
+
+            match ptr.find_child(next_byte) {
+                // TODO: this is weird API, remove_child is called after the child is allready removed
+                //       why does remove_child return should_shrink? 
+                // Do this for now, but lets focus on this sometimes
+                
+                Some(&ArtNode::Empty) => if ptr.remove_child(next_byte) {
+                    (ptr.shrink(), ret)
+                } else {
+                    (ptr.to_art_node(), ret)
+                }
+
+                _ => (ptr.to_art_node(), ret),
+            }
+        }
+    }
+
+    fn remove_rec(root: &mut ArtNode<K,V>, key: &K, depth: usize) -> Option<V> {
+        let (new_root, ret) = match mem::replace(root, ArtNode::Empty) {
+            ArtNode::Empty => (ArtNode::Empty, None),
+
+            ArtNode::Inner4(ptr) => Self::remove_inner(ptr, key, depth),
+
+            ArtNode::Inner16(ptr) => Self::remove_inner(ptr, key, depth),
+
+            ArtNode::Inner48(ptr) => Self::remove_inner(ptr, key, depth),
+
+            ArtNode::Inner256(ptr) => Self::remove_inner(ptr, key, depth),
+
+            leaf => (ArtNode::Empty, Self::remove_leaf(leaf, key)),
+        };
+
+        *root = new_root;
+        ret
+    }
+
+    pub fn remove(&mut self, key: &K) -> Option<V> {
+        Self::remove_rec(&mut self.root, key, 0)
+    }
+    
     fn preorder(root: &ArtNode<K, V>) {
         match *root {
             ArtNode::Inner4(ref ptr) => for child_index in 0..4 {
