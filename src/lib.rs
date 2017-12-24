@@ -30,7 +30,6 @@ mod tests {
 
     const N: u32 = 100000;
 
-    /*
     #[bench]
     fn bench_insert_art_u64(b: &mut Bencher) {
         type InsrtType = u64;
@@ -225,7 +224,6 @@ mod tests {
             }
         })
     }
-    */
 
     #[bench]
     fn bench_search_art_seq_u64(b: &mut Bencher) {
