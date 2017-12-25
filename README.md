@@ -1,7 +1,7 @@
 # ArtTree
 Implementation of Adaptive Radix Tree in Rust
 
-Implemented data structue from this paper: http://15721.courses.cs.cmu.edu/spring2016/papers/leis-icde2013.pdf.
+Implemented data structue from this paper: http://15721.courses.cs.cmu.edu/spring2016/papers/leis-icde2013.pdf. Structure can efficiently handle both large and small keys (and values).
 
 Implemented several benchmarks (you can replay it with `cargo bench`):
 ```
