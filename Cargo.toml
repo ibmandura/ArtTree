@@ -6,3 +6,4 @@ authors = ["buda"]
 [dependencies]
 rustc-test = "*"
 rand = "*"
+debugit = "*"

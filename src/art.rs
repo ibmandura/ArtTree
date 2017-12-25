@@ -5,6 +5,12 @@ use std::mem;
 use {ArtKey, ArtTree};
 use nodes::{ArtNode, ArtNode4, ArtNodeTrait, MAX_PREFIX_LEN};
 
+// TODO: Decide what kind of comparison do we want, ie. PartialEq might not be necessarry.
+// If we decided to compare bytes of the key (which would be correct), we could also use SIMD.
+// On the other hand, user of the lib. could implement smart and quick comparison. 
+//
+// Propably a good way forward for now would be to use PartialEq for now
+//
 impl<'a, K: 'a + ArtKey + std::cmp::PartialEq, V> ArtTree<K, V> {
     pub fn new() -> Self {
         ArtTree {
@@ -129,8 +135,8 @@ impl<'a, K: 'a + ArtKey + std::cmp::PartialEq, V> ArtTree<K, V> {
     }
 
     pub fn insert(&mut self, key: K, value: V) {
-        self.size += 1;
         Self::insert_rec(&mut self.root, 0, key, value);
+        self.size += 1;
     }
 
     #[inline]
@@ -209,19 +215,20 @@ impl<'a, K: 'a + ArtKey + std::cmp::PartialEq, V> ArtTree<K, V> {
         } else {
             let ret = Self::remove_rec(ptr.find_child_mut(next_byte), depth + prefix_match_len + 1, key);
 
-            match ptr.find_child(next_byte) {
+            if let Some(&ArtNode::Empty) = ptr.find_child(next_byte) {
                 // TODO: This is weird API, clean_child is called after the child has already been removed.
                 //       Why does remove_child return should_shrink? 
                 //       Do this for now, but lets focus on this sometimes.
-                
-                Some(&ArtNode::Empty) => if ptr.clean_child(next_byte) {
-                    (ptr.shrink(), ret)
-                } else {
-                    (ptr.to_art_node(), ret)
-                }
+                //
+                let should_shrink = ptr.clean_child(next_byte);
 
-                _ => (ptr.to_art_node(), ret),
+                if should_shrink {
+                    // TODO: After shrink happens, we should recalculate partial
+                    return (ptr.shrink(), ret);
+                }
             }
+
+            (ptr.to_art_node(), ret)
         }
     }
 

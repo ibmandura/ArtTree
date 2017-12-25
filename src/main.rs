@@ -1,37 +1,37 @@
 
-extern crate rand;
+#![feature(iterator_step_by)]
+
 extern crate art;
 
 use art::{ArtTree};
-use rand::Rng;
-
-type InsrtType = u64;
 
 fn main() {
-    let mut t: ArtTree<InsrtType, InsrtType> = ArtTree::new();
+    let mut t = ArtTree::new();
 
-    let n = 100000;
-
-    let mut rng = rand::thread_rng();
-    let mut keys = Vec::with_capacity(n);
-
-    for _ in 0..n {
-        let k = rng.gen::<InsrtType>();
-        t.insert(k,k);
-        keys.push(k);
+    let n = 10 as u32;
+    for i in 0..n {
+        t.insert(i,i);
     }
 
-    for _ in 0..20 {
-        for i in 0..n {
-            match t.get(&(i as InsrtType)) {
-                None => panic!("Nema"),
-                Some(x) => assert!(*x == i as InsrtType, "Kurcina")
-            }
+    for i in 0..n {
+        assert!(t.get(&i).is_some());
+    }
 
-            match t.get(&keys[i as usize]) {
-                None => panic!("Nema"),
-                Some(x) => assert!(*x == keys[i as usize], "Kurcina")
+    for i in (0..n).step_by(2) {
+        match t.remove(&i) {
+            Some(x) => assert_eq!(x, i),
+            None => assert!(false),
+        }
+    }
+
+    for i in 0..n {
+        if i % 2 == 1 {
+            match t.get(&i) {
+                Some(x) => assert_eq!(*x, i),
+                None => assert!(false),
             }
+        } else if t.get(&i).is_some() {
+            assert!(false);
         }
     }
 }

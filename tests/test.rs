@@ -127,21 +127,30 @@ fn long_string_test() {
 fn delete_test() {
     let mut t = ArtTree::new();
 
-    for i in 0..100u32 {
+    let n = 1000 as u32;
+    for i in 0..n {
         t.insert(i,i);
     }
 
-    for i in (0..100u32).step_by(2) {
+    for i in 0..n {
+        assert!(t.get(&i).is_some());
+    }
+
+    for i in (0..n).step_by(2) {
         match t.remove(&i) {
             Some(x) => assert_eq!(x, i),
             None => assert!(false),
         }
     }
 
-    for i in (1..100).step_by(2) {
-        match t.get(&i) {
-            Some(x) => assert_eq!(*x, i),
-            None => assert!(false),
+    for i in 0..n {
+        if i % 2 == 1 {
+            match t.get(&i) {
+                Some(x) => assert_eq!(*x, i),
+                None => assert!(false),
+            }
+        } else if t.get(&i).is_some() {
+            assert!(false);
         }
     }
 }

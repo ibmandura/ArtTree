@@ -98,13 +98,15 @@ pub struct ArtNode256<K, V> {
 pub trait ArtNodeTrait<K, V> {
     fn add_child(&mut self, node: ArtNode<K, V>, byte: u8);
 
-    // After the child has been set to Empty, it can(has) to be cleaned
-    // so that bookeepig is updated. 
-    // @return: returns `should_shrink` boolean. We can then decide if we want to shrink it or not.
+    // After the child has been set to Empty, it can(has) to be cleaned up, so that bookeeping vars are updated.
+    // @return: returns `should_shrink` boolean.
     //
-    // TODO: this API is stupid, and should be refactored. This function should return (). Or if it
-    // has to return something, should return `can_shrink` boolean.
+    // TODO: this API is stupid and should be refactored. This function should return ().
     //
+    // TODO: we have to empirically decide on the `when to shrink` constants. So far they are hardcoded
+    // to `random` numbers. We have to be careful here and make a smart tradeoff between memory consumption and speed.
+    // If we want to 
+    // 
     fn clean_child(&mut self, byte: u8) -> bool;
 
     #[inline]
@@ -112,6 +114,8 @@ pub trait ArtNodeTrait<K, V> {
 
     fn grow_and_add(self, leaf: ArtNode<K, V>, byte: u8) -> ArtNode<K, V>;
 
+    // TODO: recalculation of partial after shrink is not necessary, but could be useful. Not clear at this point
+    //
     fn shrink(self) -> ArtNode<K,V>;
 
     #[inline]
@@ -272,7 +276,10 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode4<K, V> {
             if self.keys[i as usize] == byte {
                 self.keys[i as usize] = EMPTY_CELL;
                 self.n.num_children -= 1;
+
                 self.children.swap(i as usize, self.n.num_children as usize);
+                self.keys.swap(i as usize, self.n.num_children as usize);
+
                 return self.n.num_children == 0;
             }
         }
@@ -363,7 +370,10 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode16<K, V> {
             if self.keys[i as usize] == byte {
                 self.keys[i as usize] = EMPTY_CELL;
                 self.n.num_children -= 1;
+
                 self.children.swap(i as usize, self.n.num_children as usize);
+                self.keys.swap(i as usize, self.n.num_children as usize);
+
                 return self.n.num_children <= 2
             }
         }
@@ -428,7 +438,8 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode16<K, V> {
     }
 
     fn find_child_mut(&mut self, byte: u8) -> &mut ArtNode<K, V> {
-        // TODO: O(1)
+        // TODO: use SIMD here
+        //
         for i in 0..self.n.num_children {
             if self.keys[i as usize] == byte {
                 return &mut self.children[i as usize];
@@ -438,7 +449,8 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode16<K, V> {
     }
 
     fn find_child(&self, byte: u8) -> Option<&ArtNode<K, V>> {
-        // TODO: O(1)
+        // TODO: use SIMD here
+        //
         for i in 0..self.n.num_children {
             if self.keys[i as usize] == byte {
                 return Some(&self.children[i as usize]);
@@ -558,7 +570,7 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode256<K, V> {
  
     fn clean_child(&mut self, _byte: u8) -> bool {
         self.n.num_children -= 1;
-        self.n.num_children <= 40 // TODO: decide on this constatns for shrinking
+        self.n.num_children <= 40 
     } 
 
     fn is_full(&self) -> bool {
@@ -571,7 +583,8 @@ impl<K: ArtKey, V> ArtNodeTrait<K, V> for ArtNode256<K, V> {
 
     fn shrink(mut self) -> ArtNode<K,V> {
         // TODO: several lines here basically same for all the nodes
-        //       try to dedupe somehow
+        //       try to dedupe somehow.
+        //
         let mut new_node = Box::new(ArtNode48::new());
         new_node.n.partial_len = self.n.partial_len;
 
