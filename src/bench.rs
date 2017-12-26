@@ -1,7 +1,6 @@
 
 #[cfg(test)]
 mod bench {
-
     use ArtTree;
     use rand;
     use test;
@@ -11,307 +10,107 @@ mod bench {
     use test::Bencher;
     use rand::Rng;
 
-    const N: u32 = 100000;
+    const N: usize = 100_000;
+    const N_STR_20: usize = 40_000;
+    const N_STR_100: usize = 7_000;
+    const N_STR_1000: usize = 1_000;
+    const N_SEARCH: u64 = 100_000;
 
-    #[bench]
-    fn bench_insert_art_u64(b: &mut Bencher) {
-        type InsrtType = u64;
-        let mut rng = rand::thread_rng();
+    macro_rules! bench_num {
+        ($name: ident, $ty: ident, $mapty: ident, $n: expr) => {
+            #[bench]
+            fn $name(b: &mut Bencher) {
+                let mut rng = rand::thread_rng();
 
-        b.iter(|| {
-            let mut t = ArtTree::new();
-            for _ in 0..N {
-                test::black_box(t.insert(rng.gen::<InsrtType>(),rng.gen::<InsrtType>()));
+                b.iter(|| {
+                    let mut t = $mapty::new();
+                    for _ in 0..$n {
+                        test::black_box(t.insert(rng.gen::<$ty>(), rng.gen::<$ty>()));
+                    }
+                })
             }
-        })
-    }
-
-    #[bench]
-    fn bench_insert_btree_u64(b: &mut Bencher) {
-        type InsrtType = u64;
-        let mut rng = rand::thread_rng();
-
-        b.iter(|| {
-            let mut t = BTreeMap::new();
-            for _ in 0..N {
-                test::black_box(t.insert(rng.gen::<InsrtType>(),rng.gen::<InsrtType>()));
-            }
-        })
-    }
-
-    #[bench]
-    fn bench_insert_hmap_u64(b: &mut Bencher) {
-        type InsrtType = u64;
-        let mut rng = rand::thread_rng();
-
-        b.iter(|| {
-            let mut t = HashMap::new();
-            for _ in 0..N {
-                test::black_box(t.insert(rng.gen::<InsrtType>(),rng.gen::<InsrtType>()));
-            }
-        })
-    }
-
-    #[bench]
-    fn bench_insert_art_u32(b: &mut Bencher) {
-        type InsrtType = u32;
-        let mut rng = rand::thread_rng();
-
-        b.iter(|| {
-            let mut t = ArtTree::new();
-            for _ in 0..N {
-                test::black_box(t.insert(rng.gen::<InsrtType>(),rng.gen::<InsrtType>()));
-            }
-        })
-    }
-
-    #[bench]
-    fn bench_insert_btree_u32(b: &mut Bencher) {
-        type InsrtType = u32;
-        let mut rng = rand::thread_rng();
-
-        b.iter(|| {
-            let mut t = BTreeMap::new();
-            for _ in 0..N {
-                test::black_box(t.insert(rng.gen::<InsrtType>(),rng.gen::<InsrtType>()));
-            }
-        })
-    }
-
-    #[bench]
-    fn bench_insert_hmap_u32(b: &mut Bencher) {
-        type InsrtType = u32;
-        let mut rng = rand::thread_rng();
-
-        b.iter(|| {
-            let mut t = HashMap::new();
-            for _ in 0..N {
-                test::black_box(t.insert(rng.gen::<InsrtType>(),rng.gen::<InsrtType>()));
-            }
-        })
-    }
-
-    #[bench]
-    fn bench_insert_art_len_20_rnd_string(b: &mut Bencher) {
-        let mut rng = rand::thread_rng();
-
-        b.iter(|| {
-            let mut t = ArtTree::new();
-            for i in 0..40000 {
-                let s = rng.gen_ascii_chars().take(20).collect::<String>();
-                test::black_box(t.insert(s, i));
-            }
-        })
-    }
-
-    #[bench]
-    fn bench_insert_btree_len_20_rnd_string(b: &mut Bencher) {
-        let mut rng = rand::thread_rng();
-
-        b.iter(|| {
-            let mut t = BTreeMap::new();
-            for i in 0..40000 {
-                let s = rng.gen_ascii_chars().take(20).collect::<String>();
-                test::black_box(t.insert(s, i));
-            }
-        })
-    }
-
-    #[bench]
-    fn bench_insert_hmap_len_20_rnd_string(b: &mut Bencher) {
-        let mut rng = rand::thread_rng();
-
-        b.iter(|| {
-            let mut t = HashMap::new();
-            for i in 0..40000 {
-                let s = rng.gen_ascii_chars().take(20).collect::<String>();
-                test::black_box(t.insert(s, i));
-            }
-        })
-    }
-
-    #[bench]
-    fn bench_insert_art_len_100_rnd_string(b: &mut Bencher) {
-        let mut rng = rand::thread_rng();
-
-        b.iter(|| {
-            let mut t = ArtTree::new();
-            for i in 0..7000 {
-                let s = rng.gen_ascii_chars().take(100).collect::<String>();
-                test::black_box(t.insert(s, i));
-            }
-        })
-    }
-
-    #[bench]
-    fn bench_insert_btree_len_100_rnd_string(b: &mut Bencher) {
-        let mut rng = rand::thread_rng();
-
-        b.iter(|| {
-            let mut t = BTreeMap::new();
-            for i in 0..7000 {
-                let s = rng.gen_ascii_chars().take(100).collect::<String>();
-                test::black_box(t.insert(s, i));
-            }
-        })
-    }
-
-    #[bench]
-    fn bench_insert_hmap_len_100_rnd_string(b: &mut Bencher) {
-        let mut rng = rand::thread_rng();
-
-        b.iter(|| {
-            let mut t = HashMap::new();
-            for i in 0..7000 {
-                let s = rng.gen_ascii_chars().take(100).collect::<String>();
-                test::black_box(t.insert(s, i));
-            }
-        })
-    }
-
-    #[bench]
-    fn bench_insert_art_len_1000_rnd_string(b: &mut Bencher) {
-        let mut rng = rand::thread_rng();
-
-        b.iter(|| {
-            let mut t = ArtTree::new();
-            for i in 0..1000 {
-                let s = rng.gen_ascii_chars().take(1000).collect::<String>();
-                test::black_box(t.insert(s, i));
-            }
-        })
-    }
-
-    #[bench]
-    fn bench_insert_btree_len_1000_rnd_string(b: &mut Bencher) {
-        let mut rng = rand::thread_rng();
-
-        b.iter(|| {
-            let mut t = BTreeMap::new();
-            for i in 0..1000 {
-                let s = rng.gen_ascii_chars().take(1000).collect::<String>();
-                test::black_box(t.insert(s, i));
-            }
-        })
-    }
-
-    #[bench]
-    fn bench_insert_hmap_len_1000_rnd_string(b: &mut Bencher) {
-        let mut rng = rand::thread_rng();
-
-        b.iter(|| {
-            let mut t = HashMap::new();
-            for i in 0..1000 {
-                let s = rng.gen_ascii_chars().take(1000).collect::<String>();
-                test::black_box(t.insert(s, i));
-            }
-        })
-    }
-
-    #[bench]
-    fn bench_search_art_seq_u64(b: &mut Bencher) {
-        let num_insert = 100000u64;
-        let mut t = ArtTree::new();
-
-        for i in 0..num_insert {
-            t.insert(i, i);
         }
-
-        b.iter(|| {
-            for i in 0..num_insert {
-                test::black_box( t.get(&i) );
-            }
-        })
     }
 
-    #[bench]
-    fn bench_search_btree_seq_u64(b: &mut Bencher) {
-        let num_insert = 100000u64;
-        let mut t = BTreeMap::new();
+    bench_num!(bench_insert_art_u64, u64, ArtTree, N);
+    bench_num!(bench_insert_btree_u64, u64, BTreeMap, N);
+    bench_num!(bench_insert_hmap_u64, u64, HashMap, N);
 
-        for i in 0..num_insert {
-            t.insert(i, i);
+    bench_num!(bench_insert_art_u32, u32, ArtTree, N);
+    bench_num!(bench_insert_btree_u32, u32, BTreeMap, N);
+    bench_num!(bench_insert_hmap_u32, u32, HashMap, N);
+
+    macro_rules! bench_str {
+        ($name: ident, $len: expr, $mapty: ident, $n: expr) => {
+            #[bench]
+            fn $name(b: &mut Bencher) {
+                let mut rng = rand::thread_rng();
+
+                b.iter(|| {
+                    let mut t = $mapty::new();
+                    for i in 0..$n {
+                        let s = rng.gen_ascii_chars().take($len).collect::<String>();
+                        test::black_box(t.insert(s, i));
+                    }
+                })
+            }
         }
-
-        b.iter(|| {
-            for i in 0..10 * num_insert {
-                let k = i % num_insert;
-                test::black_box( t.get(&k) );
-            }
-        })
     }
 
-    #[bench]
-    fn bench_search_hmap_seq_u64(b: &mut Bencher) {
-        let num_insert = 100000u64;
-        let mut t = HashMap::new();
+    bench_str!(bench_insert_art_20_rnd_str, 20, ArtTree, N_STR_20);
+    bench_str!(bench_insert_btree_20_rnd_str, 20, BTreeMap, N_STR_20);
+    bench_str!(bench_insert_hmap_20_rnd_str, 20, HashMap, N_STR_20);
 
-        for i in 0..num_insert {
-            t.insert(i, i);
+    bench_str!(bench_insert_art_100_rnd_str, 100, ArtTree, N_STR_100);
+    bench_str!(bench_insert_btree_100_rnd_str, 100, BTreeMap, N_STR_100);
+    bench_str!(bench_insert_hmap_100_rnd_str, 100, HashMap, N_STR_100);
+
+    bench_str!(bench_insert_art_1000_rnd_str, 1000, ArtTree, N_STR_1000);
+    bench_str!(bench_insert_btree_1000_rnd_str, 1000, BTreeMap, N_STR_1000);
+    bench_str!(bench_insert_hmap_1000_rnd_str, 1000, HashMap, N_STR_1000);
+
+    macro_rules! bench_search_seq {
+        ($name: ident, $mapty: ident, $n: expr) => {
+            #[bench]
+            fn $name(b: &mut Bencher) {
+                let mut t = $mapty::new();
+
+                for i in 0..$n {
+                    t.insert(i, i);
+                }
+
+                b.iter(|| for i in 0..$n {
+                    test::black_box(t.get(&i));
+                })
+            }
         }
-
-        b.iter(|| {
-            for i in 0..10 * num_insert {
-                let k = i % num_insert;
-                test::black_box( t.get(&k) );
-            }
-        })
     }
 
-    #[bench]
-    fn bench_search_art_rnd_u64(b: &mut Bencher) {
-        type InsrtType = u64;
-        let mut rng = rand::thread_rng();
-        let num_insert = 100000u64;
-        let mut t = ArtTree::new();
+    bench_search_seq!(bench_search_art_seq_u64, ArtTree, N_SEARCH);
+    bench_search_seq!(bench_search_btree_seq_u64, BTreeMap, N_SEARCH);
+    bench_search_seq!(bench_search_hmap_seq_u64, HashMap, N_SEARCH);
 
-        for i in 0..num_insert {
-            t.insert(rng.gen::<InsrtType>(), i);
+    macro_rules! bench_search_rnd {
+        ($name: ident, $mapty: ident, $n: expr) => {
+            #[bench]
+            fn $name(b: &mut Bencher) {
+                type InsrtType = u64;
+                let mut rng = rand::thread_rng();
+                let mut t = $mapty::new();
+
+                for i in 0..$n {
+                    t.insert(rng.gen::<InsrtType>(), i);
+                }
+
+                b.iter(|| for i in 0..10 * $n {
+                    let k = i % $n;
+                    test::black_box(t.get(&k));
+                })
+            }
         }
-
-        b.iter(|| {
-            for i in 0..10 * num_insert {
-                let k = i % num_insert;
-                test::black_box( t.get(&k) );
-            }
-        })
     }
 
-    #[bench]
-    fn bench_search_btree_rnd_u64(b: &mut Bencher) {
-        type InsrtType = u64;
-        let mut rng = rand::thread_rng();
-        let num_insert = 100000u64;
-        let mut t = BTreeMap::new();
-
-        for i in 0..num_insert {
-            t.insert(rng.gen::<InsrtType>(), i);
-        }
-
-        b.iter(|| {
-            for i in 0..10 * num_insert {
-                let k = i % num_insert;
-                test::black_box( t.get(&k) );
-            }
-        })
-    }
-
-    #[bench]
-    fn bench_search_hmap_rnd_u64(b: &mut Bencher) {
-        type InsrtType = u64;
-        let mut rng = rand::thread_rng();
-        let num_insert = 100000u64;
-        let mut t = HashMap::new();
-
-        for i in 0..num_insert {
-            t.insert(rng.gen::<InsrtType>(), i);
-        }
-
-        b.iter(|| {
-            for i in 0..10 * num_insert {
-                let k = i % num_insert;
-                test::black_box( t.get(&k) );
-            }
-        })
-    }
+    bench_search_rnd!(bench_search_art_rnd_u64, ArtTree, N_SEARCH);
+    bench_search_rnd!(bench_search_btree_rnd_u64, BTreeMap, N_SEARCH);
+    bench_search_rnd!(bench_search_hmap_rnd_u64, HashMap, N_SEARCH);
 }
