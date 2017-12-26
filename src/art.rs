@@ -276,3 +276,9 @@ impl ArtKey for std::string::String {
         self.as_bytes()
     }
 }
+
+impl ArtKey for std::vec::Vec<u8> {
+    fn bytes(&self) -> &[u8] {
+        self.as_slice()
+    }
+}

@@ -53,8 +53,12 @@ mod bench {
                 b.iter(|| {
                     let mut t = $mapty::new();
                     for i in 0..$n {
-                        let s = rng.gen_ascii_chars().take($len).collect::<String>();
-                        test::black_box(t.insert(s, i));
+                        // use Vec instead of Str to avoid utf-8 overhead
+                        let mut v = Vec::with_capacity($len);
+                        for ch in rng.gen_ascii_chars().take(20) {
+                            v.push(ch as u8);
+                        }
+                        test::black_box(t.insert(v, i));
                     }
                 })
             }
