@@ -16,11 +16,15 @@ mod bench {
     const N_STR_1000: usize = 1_000;
     const N_SEARCH: u64 = 100_000;
 
+    fn new_rng() -> rand::XorShiftRng {
+        rand::XorShiftRng::new_unseeded()
+    }
+
     macro_rules! bench_num {
         ($name: ident, $ty: ident, $mapty: ident, $n: expr) => {
             #[bench]
             fn $name(b: &mut Bencher) {
-                let mut rng = rand::thread_rng();
+                let mut rng = new_rng();
 
                 b.iter(|| {
                     let mut t = $mapty::new();
@@ -44,7 +48,7 @@ mod bench {
         ($name: ident, $len: expr, $mapty: ident, $n: expr) => {
             #[bench]
             fn $name(b: &mut Bencher) {
-                let mut rng = rand::thread_rng();
+                let mut rng = new_rng();
 
                 b.iter(|| {
                     let mut t = $mapty::new();
@@ -95,7 +99,7 @@ mod bench {
             #[bench]
             fn $name(b: &mut Bencher) {
                 type InsrtType = u64;
-                let mut rng = rand::thread_rng();
+                let mut rng = new_rng();
                 let mut t = $mapty::new();
 
                 for i in 0..$n {
